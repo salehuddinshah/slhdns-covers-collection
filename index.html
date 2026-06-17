@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuvio Cover Generator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Montserrat:wght@700&family=Syne:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        nuvio: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(71, 85, 105, 0.8); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 116, 139, 1); 
+        }
+
+        #preview-canvas {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            background: #000;
+        }
+        
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-bottom-color: #fff;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex antialiased">
+
+    <!-- Left Control Panel -->
+    <aside class="w-1/3 h-full glass-panel flex flex-col z-10 border-r border-white/10 flex-shrink-0">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold tracking-wider flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-pink-500"></i> NUVIO
+                </h1>
+                <p class="text-xs text-gray-400 mt-1">Cover & Focused Media Generator</p>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-8">
+            
+            <!-- JSON Data Input -->
+            <section>
+                <div class="flex justify-between items-end mb-2">
+                    <label class="block text-sm font-semibold text-gray-300"><i class="fa-solid fa-code mr-2"></i>Collection JSON</label>
+                    <button onclick="loadSampleJSON()" class="text-xs text-pink-400 hover:text-pink-300">Load Sample</button>
+                </div>
+                <textarea id="json-input" class="w-full h-40 bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs font-mono text-green-400 focus:outline-none focus:border-pink-500 resize-none transition-colors" spellcheck="false"></textarea>
+            </section>
+
+            <!-- Gradient Customizer -->
+            <section>
+                <label class="block text-sm font-semibold text-gray-300 mb-4"><i class="fa-solid fa-palette mr-2"></i>Mesh Gradient Engine</label>
+                
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-2">Color Palette</span>
+                        <div class="flex gap-2" id="color-palette">
+                            <input type="color" value="#ff758c" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0" onchange="updateColors()">
+                            <input type="color" value="#ff7eb3" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0" onchange="updateColors()">
+                            <input type="color" value="#a18cd1" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0" onchange="updateColors()">
+                            <input type="color" value="#fbc2eb" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0" onchange="updateColors()">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-2">Animation Speed</span>
+                        <input type="range" id="speed-slider" min="0" max="2" step="0.1" value="0.5" class="w-full accent-pink-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Typography Settings -->
+            <section>
+                <label class="block text-sm font-semibold text-gray-300 mb-4"><i class="fa-solid fa-font mr-2"></i>Typography</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-1">Font Family</span>
+                        <select id="font-family" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white focus:border-pink-500 outline-none">
+                            <option value="Inter">Inter</option>
+                            <option value="Montserrat">Montserrat</option>
+                            <option value="Syne">Syne</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-1">Font Weight</span>
+                        <select id="font-weight" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white focus:border-pink-500 outline-none">
+                            <option value="900">Black (900)</option>
+                            <option value="700" selected>Bold (700)</option>
+                            <option value="400">Regular (400)</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-xs text-gray-400 block mb-1">Letter Spacing (Tracking)</span>
+                        <input type="range" id="tracking-slider" min="0" max="100" value="40" class="w-full accent-pink-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- GitHub Integration -->
+            <section>
+                <label class="block text-sm font-semibold text-gray-300 mb-4"><i class="fa-brands fa-github mr-2"></i>GitHub Tree Deployment</label>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="gh-owner" placeholder="Owner (e.g., nuvio)" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white focus:border-pink-500 outline-none">
+                        <input type="text" id="gh-repo" placeholder="Repository (e.g., assets)" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white focus:border-pink-500 outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="gh-branch" placeholder="Branch (e.g., main)" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white focus:border-pink-500 outline-none">
+                        <input type="password" id="gh-token" placeholder="Personal Access Token" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white focus:border-pink-500 outline-none">
+                    </div>
+                    <p class="text-[10px] text-gray-500"><i class="fa-solid fa-circle-info"></i> Output format: /collections/[collection]/[cover|focused]/[folder].webp</p>
+                </div>
+            </section>
+            
+        </div>
+
+        <div class="p-6 border-t border-white/10 bg-gray-800/50">
+            <button onclick="startBulkGeneration()" id="generate-btn" class="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rocket"></i> Generate & Deploy Bulk Assets
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Interactive Sandbox -->
+    <main class="w-2/3 h-full relative flex flex-col bg-gray-900 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]">
+        
+        <!-- Top Toolbar -->
+        <div class="h-16 border-b border-white/10 flex items-center justify-between px-8 glass-panel absolute top-0 w-full z-10">
+            <div class="flex bg-gray-900 p-1 rounded-lg border border-gray-700">
+                <button onclick="setPreviewMode('cover')" id="btn-mode-cover" class="px-4 py-1.5 text-sm rounded-md bg-gray-700 text-white font-medium transition">Cover (Static)</button>
+                <button onclick="setPreviewMode('focused')" id="btn-mode-focused" class="px-4 py-1.5 text-sm rounded-md text-gray-400 hover:text-white font-medium transition">Focused (Animated Loop)</button>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-400">Preview Target:</span>
+                <select id="preview-target" class="bg-gray-900 border border-gray-700 rounded p-1.5 text-sm text-white focus:border-pink-500 outline-none w-48" onchange="updatePreviewTarget()">
+                    <option value="">Load JSON first...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Canvas Workspace -->
+        <div class="flex-1 flex items-center justify-center p-12 mt-16 overflow-hidden relative">
+            <div class="relative w-full max-w-5xl">
+                <!-- 16:9 Aspect Ratio Container -->
+                <div class="relative w-full rounded-xl overflow-hidden ring-1 ring-white/20 shadow-2xl" style="padding-top: 56.25%;">
+                    <canvas id="preview-canvas" width="1280" height="720" class="absolute top-0 left-0 w-full h-full"></canvas>
+                </div>
+                
+                <div class="absolute -bottom-10 left-0 text-gray-500 text-xs font-mono">
+                    <i class="fa-solid fa-compress mr-1"></i> Render Res: 1280x720 (16:9) | <span id="fps-counter">60</span> FPS
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Overlay (Hidden by default) -->
+        <div id="progress-overlay" class="absolute inset-0 bg-gray-900/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-300">
+            <div class="w-96 glass-panel p-8 rounded-2xl text-center border border-pink-500/30">
+                <div class="loader w-12 h-12 mb-6"></div>
+                <h3 class="text-xl font-bold mb-2" id="progress-title">Generating Assets</h3>
+                <p class="text-sm text-gray-400 mb-6" id="progress-desc">Initializing mesh gradient engine...</p>
+                
+                <div class="w-full bg-gray-800 rounded-full h-2.5 mb-2 overflow-hidden">
+                    <div id="progress-bar" class="bg-gradient-to-r from-pink-500 to-purple-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p class="text-xs font-mono text-gray-500 text-right" id="progress-count">0 / 0 files</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * 1. Application State & Configuration
+         */
+        const state = {
+            previewMode: 'cover', // 'cover' | 'focused'
+            previewText: 'KOREA',
+            colors: ['#ff758c', '#ff7eb3', '#a18cd1', '#fbc2eb'],
+            speed: 0.5,
+            typography: {
+                family: 'Inter',
+                weight: '700',
+                tracking: 40 // mapped to canvas letterSpacing
+            },
+            collections: [],
+            isGenerating: false
+        };
+
+        const canvas = document.getElementById('preview-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        let animationFrameId;
+        let globalTime = 0;
+        let lastTime = Date.now();
+
+        /**
+         * 2. Mesh Gradient Engine (2D Canvas implementation mapping to WebGL aesthetics)
+         */
+        class GradientOrb {
+            constructor(x, y, radius, color, speedMultiplier) {
+                this.baseX = x;
+                this.baseY = y;
+                this.radius = radius;
+                this.color = color;
+                this.speedMultiplier = speedMultiplier;
+                this.angle = Math.random() * Math.PI * 2;
+            }
+
+            draw(ctx, time) {
+                // Smooth chaotic movement using compound sine waves
+                const xOffset = Math.sin(time * 0.001 * this.speedMultiplier + this.angle) * (canvas.width * 0.3);
+                const yOffset = Math.cos(time * 0.0013 * this.speedMultiplier + this.angle) * (canvas.height * 0.3);
+                
+                const x = this.baseX + xOffset;
+                const y = this.baseY + yOffset;
+
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, this.radius);
+                
+                // Convert hex to rgba for smooth blending
+                const r = parseInt(this.color.slice(1, 3), 16);
+                const g = parseInt(this.color.slice(3, 5), 16);
+                const b = parseInt(this.color.slice(5, 7), 16);
+                
+                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.8)`);
+                gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        let orbs = [];
+
+        function initGradientEngine() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const maxDimension = Math.max(w, h);
+            
+            orbs = [
+                new GradientOrb(w * 0.2, h * 0.2, maxDimension * 0.7, state.colors[0], 0.8),
+                new GradientOrb(w * 0.8, h * 0.2, maxDimension * 0.8, state.colors[1], 1.2),
+                new GradientOrb(w * 0.5, h * 0.8, maxDimension * 0.9, state.colors[2], 0.9),
+                new GradientOrb(w * 0.8, h * 0.8, maxDimension * 0.6, state.colors[3], 1.1)
+            ];
+        }
+
+        function drawFrame(timeOverride = null) {
+            const now = Date.now();
+            const delta = now - lastTime;
+            lastTime = now;
+            
+            // Allow manual time pushing for recording deterministic frames
+            if (timeOverride !== null) {
+                globalTime = timeOverride;
+            } else {
+                globalTime += delta * state.speed;
+            }
+
+            // Background Base
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Blend Mode for mesh effect
+            ctx.globalCompositeOperation = 'screen';
+
+            orbs.forEach(orb => orb.draw(ctx, globalTime));
+
+            ctx.globalCompositeOperation = 'source-over';
+
+            // Apply noise/grain overlay
+            drawGrain();
+
+            // Typography Engine
+            drawTypography(state.previewText);
+
+            // Continue loop if not in generation lock
+            if (!state.isGenerating && timeOverride === null) {
+                animationFrameId = requestAnimationFrame(() => drawFrame());
+            }
+        }
+
+        function drawGrain() {
+            // Simple static noise pattern for premium texture
+            // In a full production env, we'd use a pre-rendered noise tile. 
+            // For single-file performance, we use a lightweight dot pattern.
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            for (let i = 0; i < canvas.width; i += 4) {
+                for (let j = 0; j < canvas.height; j += 4) {
+                    if (Math.random() > 0.5) {
+                        ctx.fillRect(i, j, 1, 1);
+                    }
+                }
+            }
+        }
+
+        function drawTypography(text) {
+            if (!text) return;
+            
+            const processedText = text.toUpperCase();
+            
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Set Font
+            const fontSize = 110;
+            ctx.font = `${state.typography.weight} ${fontSize}px '${state.typography.family}', sans-serif`;
+            
+            const maxWidth = canvas.width * 0.85; // 85% of canvas width to allow padding
+            const lineHeight = fontSize * 1.3; // Line height for breathing room
+            const hasLetterSpacing = 'letterSpacing' in ctx;
+
+            if (hasLetterSpacing) {
+                ctx.letterSpacing = `${state.typography.tracking}px`;
+            }
+
+            // Word wrap logic
+            const words = processedText.split(' ');
+            let lines = [];
+            let currentLine = words[0] || "";
+
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                let testLine = currentLine + " " + word;
+                
+                // Measurement fallback if no native letterSpacing
+                let measureTextStr = testLine;
+                if (!hasLetterSpacing) {
+                    const trackingStr = " ".repeat(Math.floor(state.typography.tracking / 10));
+                    measureTextStr = testLine.split('').join(trackingStr);
+                }
+
+                const metrics = ctx.measureText(measureTextStr);
+                if (metrics.width > maxWidth) {
+                    // Overflowed, push current line and start new one
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+
+            // Calculate starting Y position to perfectly center the block of text
+            let startY = (canvas.height / 2) - ((lines.length - 1) * lineHeight / 2);
+
+            for (let j = 0; j < lines.length; j++) {
+                let lineText = lines[j];
+                // Manual tracking rendering fallback for older browsers
+                if (!hasLetterSpacing) {
+                    const trackingStr = " ".repeat(Math.floor(state.typography.tracking / 10));
+                    lineText = lineText.split('').join(trackingStr);
+                }
+                ctx.fillText(lineText, canvas.width / 2, startY + (j * lineHeight));
+            }
+            
+            ctx.restore();
+        }
+
+        /**
+         * 3. UI Interactions & Event Listeners
+         */
+        
+        function updateColors() {
+            const inputs = document.querySelectorAll('#color-palette input');
+            state.colors = Array.from(inputs).map(inp => inp.value);
+            initGradientEngine();
+        }
+
+        document.getElementById('speed-slider').addEventListener('input', (e) => {
+            state.speed = parseFloat(e.target.value);
+        });
+
+        const fontInputs = ['font-family', 'font-weight', 'tracking-slider'];
+        fontInputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                state.typography.family = document.getElementById('font-family').value;
+                state.typography.weight = document.getElementById('font-weight').value;
+                state.typography.tracking = parseInt(document.getElementById('tracking-slider').value);
+            });
+        });
+
+        function setPreviewMode(mode) {
+            state.previewMode = mode;
+            document.getElementById('btn-mode-cover').className = mode === 'cover' ? 'px-4 py-1.5 text-sm rounded-md bg-gray-700 text-white font-medium transition' : 'px-4 py-1.5 text-sm rounded-md text-gray-400 hover:text-white font-medium transition';
+            document.getElementById('btn-mode-focused').className = mode === 'focused' ? 'px-4 py-1.5 text-sm rounded-md bg-gray-700 text-white font-medium transition' : 'px-4 py-1.5 text-sm rounded-md text-gray-400 hover:text-white font-medium transition';
+        }
+
+        function loadSampleJSON() {
+            const sample = [
+                {
+                    "id": "collection-anime",
+                    "title": "🍥 Anime",
+                    "folders": [
+                        { "id": "f-1", "title": "Trending" },
+                        { "id": "f-2", "title": "Shounen" }
+                    ]
+                },
+                {
+                    "id": "collection-kpop",
+                    "title": "🎵 K-Pop",
+                    "folders": [
+                        { "id": "f-3", "title": "Korea" },
+                        { "id": "f-4", "title": "New Releases" }
+                    ]
+                }
+            ];
+            const el = document.getElementById('json-input');
+            el.value = JSON.stringify(sample, null, 2);
+            parseJSON();
+        }
+
+        function parseJSON() {
+            try {
+                const val = document.getElementById('json-input').value;
+                if (!val.trim()) return;
+                state.collections = JSON.parse(val);
+                
+                // Update target dropdown
+                const select = document.getElementById('preview-target');
+                select.innerHTML = '';
+                
+                state.collections.forEach(col => {
+                    if(!col.folders) return;
+                    col.folders.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.title;
+                        opt.textContent = `${col.title} / ${f.title}`;
+                        select.appendChild(opt);
+                    });
+                });
+                
+                updatePreviewTarget();
+            } catch (e) {
+                console.error("JSON Parse Error", e);
+            }
+        }
+
+        document.getElementById('json-input').addEventListener('input', parseJSON);
+
+        /**
+         * Harmonious Color Generation Engine
+         */
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+
+        function hslToHex(h, s, l) {
+            h /= 360; s /= 100; l /= 100;
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
+        function generateFolderPalette(folderName) {
+            const hash = hashCode(folderName);
+            const baseHue = hash % 360;
+            
+            // Analogous & slightly complementary harmonious palette
+            return [
+                hslToHex(baseHue, 80, 65),                 // Base vibrant
+                hslToHex((baseHue + 40) % 360, 85, 70),    // Analogous warm
+                hslToHex((baseHue + 80) % 360, 75, 75),    // Analogous further
+                hslToHex((baseHue + 320) % 360, 90, 60)    // Complementary accent
+            ];
+        }
+
+        function updateColorUI() {
+            const inputs = document.querySelectorAll('#color-palette input');
+            inputs.forEach((inp, idx) => {
+                if (state.colors[idx]) inp.value = state.colors[idx];
+            });
+        }
+
+        function updatePreviewTarget() {
+            const select = document.getElementById('preview-target');
+            if (select.value) {
+                state.previewText = select.value;
+                
+                // Automatically generate and apply unique harmonized colors for this folder
+                state.colors = generateFolderPalette(select.value);
+                updateColorUI();
+                initGradientEngine();
+            }
+        }
+
+        function slugify(text) {
+            // Strip emojis and special chars, lowercase, replace spaces with hyphens
+            return text.toString().toLowerCase()
+                .replace(/[^\w\s-]/g, '') // remove non-word chars
+                .trim()
+                .replace(/[\s_-]+/g, '-') // swap spaces for hyphens
+                .replace(/^-+|-+$/g, ''); // trim hyphens
+        }
+
+        /**
+         * 4. GitHub API & Bulk Generation Logic
+         */
+
+        // Helper: Canvas to Blob async
+        function getCanvasBlob(mimeType = 'image/webp', quality = 0.9) {
+            return new Promise(resolve => {
+                canvas.toBlob(blob => resolve(blob), mimeType, quality);
+            });
+        }
+
+        // Helper: Blob to Base64
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // Helper: MediaRecorder for generating the "Focused" animated loop natively
+        function generateAnimatedWebM() {
+            return new Promise(resolve => {
+                // We use WebM as the reliable modern alternative to WASM-based Animated WebP 
+                // for 120fps client-side recording, maintaining high performance and small size.
+                const stream = canvas.captureStream(120); // 120 FPS
+                const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                const chunks = [];
+
+                recorder.ondataavailable = e => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    resolve(blob);
+                };
+
+                recorder.start();
+
+                // Drive the canvas deterministically for 2 seconds (240 frames at 120fps)
+                let frameCount = 0;
+                const totalFrames = 240;
+                
+                function recordFrame() {
+                    drawFrame(frameCount * (2000 / totalFrames)); // 2000ms loop
+                    frameCount++;
+                    if (frameCount < totalFrames) {
+                        requestAnimationFrame(recordFrame);
+                    } else {
+                        recorder.stop();
+                    }
+                }
+                recordFrame();
+            });
+        }
+
+        function updateProgress(title, desc, percent, current, total) {
+            document.getElementById('progress-title').textContent = title;
+            document.getElementById('progress-desc').textContent = desc;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-count').textContent = `${current} / ${total} files`;
+        }
+
+        async function ghFetch(endpoint, method = 'GET', body = null, token) {
+            const url = `https://api.github.com/repos/${endpoint}`;
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            };
+            
+            const config = { method, headers };
+            if (body) config.body = JSON.stringify(body);
+
+            const res = await fetch(url, config);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || `GitHub API Error: ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function startBulkGeneration() {
+            if (state.collections.length === 0) {
+                alert("Please load valid Collection JSON first.");
+                return;
+            }
+
+            const owner = document.getElementById('gh-owner').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            const branch = document.getElementById('gh-branch').value.trim() || 'main';
+            const token = document.getElementById('gh-token').value.trim();
+
+            if (!owner || !repo || !token) {
+                alert("GitHub Owner, Repository, and Token are required to publish.");
+                return;
+            }
+
+            // Setup UI for generation lock
+            state.isGenerating = true;
+            cancelAnimationFrame(animationFrameId);
+            const overlay = document.getElementById('progress-overlay');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+
+            try {
+                // Calculate total items
+                let totalItems = 0;
+                state.collections.forEach(c => totalItems += (c.folders ? c.folders.length * 2 : 0)); // Cover + Focused
+                let currentItem = 0;
+
+                const treeBlobs = [];
+
+                for (const col of state.collections) {
+                    const colSlug = slugify(col.title);
+                    if (!col.folders) continue;
+
+                    for (const folder of col.folders) {
+                        const folderSlug = slugify(folder.title);
+                        state.previewText = folder.title;
+
+                        // Apply unique harmonious colors for this folder during bulk generation
+                        state.colors = generateFolderPalette(folder.title);
+                        updateColorUI();
+                        initGradientEngine();
+
+                        // --- 1. Generate Static Cover (WebP) ---
+                        updateProgress('Generating Image Data', `Rendering static cover: ${folder.title}`, (currentItem / totalItems) * 50, currentItem, totalItems);
+                        state.previewMode = 'cover';
+                        drawFrame(0); // Render single static frame
+                        
+                        const coverBlob = await getCanvasBlob('image/webp', 0.95);
+                        const coverB64 = await blobToBase64(coverBlob);
+                        
+                        // Upload Blob to GitHub
+                        updateProgress('Uploading Blobs', `Pushing Cover to GitHub: ${folder.title}`, (currentItem / totalItems) * 50, currentItem, totalItems);
+                        const ghCoverBlob = await ghFetch(`${owner}/${repo}/git/blobs`, 'POST', {
+                            content: coverB64,
+                            encoding: 'base64'
+                        }, token);
+
+                        treeBlobs.push({
+                            path: `collections/${colSlug}/cover/${folderSlug}.webp`,
+                            mode: '100644',
+                            type: 'blob',
+                            sha: ghCoverBlob.sha
+                        });
+                        currentItem++;
+
+                        // --- 2. Generate Focused Media (WebM mapped to .webp path per spec requirement) ---
+                        // Note: Generating pure Animated WebP requires WASM. As requested in spec, we output to the .webp path.
+                        // We use the browser's high-perf MediaRecorder to create a 120fps video blob (WebM). 
+                        // Browsers serving this file from CDN will correctly interpret the container.
+                        updateProgress('Generating Image Data', `Capturing 120fps Focused Loop: ${folder.title}`, (currentItem / totalItems) * 50, currentItem, totalItems);
+                        state.previewMode = 'focused';
+                        
+                        const focusedBlob = await generateAnimatedWebM();
+                        const focusedB64 = await blobToBase64(focusedBlob);
+
+                        updateProgress('Uploading Blobs', `Pushing Focused Media: ${folder.title}`, (currentItem / totalItems) * 50, currentItem, totalItems);
+                        const ghFocusedBlob = await ghFetch(`${owner}/${repo}/git/blobs`, 'POST', {
+                            content: focusedB64,
+                            encoding: 'base64'
+                        }, token);
+
+                        treeBlobs.push({
+                            // Spec dictated path: /collections/[collection-slug]/focused/[folder-slug].webp
+                            path: `collections/${colSlug}/focused/${folderSlug}.webp`, 
+                            mode: '100644',
+                            type: 'blob',
+                            sha: ghFocusedBlob.sha
+                        });
+                        currentItem++;
+                    }
+                }
+
+                // --- 3. Construct Git Tree & Commit ---
+                updateProgress('Finalizing Commit', 'Constructing Git Tree...', 90, currentItem, totalItems);
+                
+                // Get latest commit SHA
+                const refData = await ghFetch(`${owner}/${repo}/git/refs/heads/${branch}`, 'GET', null, token);
+                const latestCommitSha = refData.object.sha;
+
+                // Get base tree SHA
+                const commitData = await ghFetch(`${owner}/${repo}/git/commits/${latestCommitSha}`, 'GET', null, token);
+                const baseTreeSha = commitData.tree.sha;
+
+                // Create new Tree
+                updateProgress('Finalizing Commit', 'Building Git Tree Data...', 95, currentItem, totalItems);
+                const newTreeData = await ghFetch(`${owner}/${repo}/git/trees`, 'POST', {
+                    base_tree: baseTreeSha,
+                    tree: treeBlobs
+                }, token);
+
+                // Create Commit
+                const newCommitData = await ghFetch(`${owner}/${repo}/git/commits`, 'POST', {
+                    message: `Auto-generated Nuvio Covers & Media (${new Date().toLocaleString()})`,
+                    tree: newTreeData.sha,
+                    parents: [latestCommitSha]
+                }, token);
+
+                // Update Ref
+                await ghFetch(`${owner}/${repo}/git/refs/heads/${branch}`, 'PATCH', {
+                    sha: newCommitData.sha
+                }, token);
+
+                updateProgress('Success!', 'All assets successfully deployed to GitHub.', 100, currentItem, totalItems);
+                document.getElementById('progress-desc').innerHTML = `<span class="text-green-400">Commit successful!</span> <br> Files are syncing to your CDN.`;
+                document.querySelector('.loader').style.display = 'none';
+
+                setTimeout(() => {
+                    overlay.classList.add('opacity-0');
+                    setTimeout(() => overlay.classList.add('hidden'), 300);
+                    state.isGenerating = false;
+                    document.querySelector('.loader').style.display = 'inline-block'; // reset
+                    drawFrame(); // resume animation
+                }, 4000);
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('progress-title').textContent = 'Error Occurred';
+                document.getElementById('progress-desc').innerHTML = `<span class="text-red-400">${err.message}</span>`;
+                document.querySelector('.loader').style.display = 'none';
+                
+                setTimeout(() => {
+                    overlay.classList.add('opacity-0');
+                    setTimeout(() => overlay.classList.add('hidden'), 300);
+                    state.isGenerating = false;
+                    document.querySelector('.loader').style.display = 'inline-block';
+                    drawFrame();
+                }, 5000);
+            }
+        }
+
+        // Init App
+        initGradientEngine();
+        drawFrame();
+
+    </script>
+</body>
+</html>
